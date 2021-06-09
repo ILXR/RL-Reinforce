@@ -59,5 +59,5 @@ class REINFORCE:
         self.optimizer.zero_grad()
         loss.backward()
         # 梯度裁剪防止过拟合，最大L2范数为40
-        # utils.clip_grad_norm(self.model.parameters(), 20)
+        # utils.clip_grad_norm(self.model.parameters(), 50)
         self.optimizer.step()

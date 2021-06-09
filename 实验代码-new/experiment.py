@@ -55,7 +55,29 @@ ss_ucb = algorithm_run(armp, algorithm_ucb, 600)
 Hidden_Size = 128
 Gamma = 0.99
 Episodes = 600  # 训练轮数
-Steps = 1  # 每轮的步数
+Steps = 4  # 每轮的步数
+
+
+def rolling_mean(data, size=10):
+    result = []
+    length = len(data)
+    half = int(size/2)
+    for i in range(length):
+        start = max(0, i-half+1)
+        end = min(i+size-half, length)
+        tem = data[start: end]
+        result.append(np.mean(tem))
+    return result
+
+
+def smooth_average(record, n):
+    # 对结果进行平均处理
+    res = []
+    length = len(record)
+    for i in range(int(length/n)):
+        average = sum(record[n*i:n*(i+1)]) / n
+        res.append(average)
+    return res
 
 
 # Env and Reinforce model
@@ -68,8 +90,8 @@ for episode in range(Episodes):
     entropies = []
     log_probs = []
     rewards = []
-    state = env.random_state()
     for t in range(Steps):
+        state = env.random_state()
         action, log_prob, entropy = agent.select_action(
             torch.from_numpy(state))
         reward = env.get_reward(state, action)
@@ -77,9 +99,13 @@ for episode in range(Episodes):
         entropies.append(entropy)
         log_probs.append(log_prob)
         rewards.append(reward)
-        state = env.random_state()
     agent.update_parameters(rewards, log_probs, entropies, Gamma)
-    reinforce_rewards.append(np.mean(rewards))
+    mean_reward = np.mean(rewards)
+    reinforce_rewards.append(mean_reward)
+    if(episode % 10 == 0):
+        print(
+            f"Episode {episode}: state = {state} , arm = {action[0]} , reward_mean = {mean_reward}")
+reinforce_rewards = rolling_mean(reinforce_rewards, size=15)
 
 
 ls_array = ['-', '-.', '--', ':', '-', '-']
