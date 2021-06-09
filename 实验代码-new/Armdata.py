@@ -36,7 +36,7 @@ class DNNPartition():
 
         self.arm_k =arm_k
         self.p = 0
-        self.dnn_reader = pd.read_csv(open("./DNN_Partition.csv"))
+        self.dnn_reader = pd.read_csv(open("./实验代码-new/DNN_Partition.csv"))
         self.dnn_data = np.array(self.dnn_reader)
 
    # 此处是获取奖励值
