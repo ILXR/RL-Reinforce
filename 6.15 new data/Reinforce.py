@@ -52,8 +52,10 @@ class REINFORCE:
         loss = 0
         for i in reversed(range(len(rewards))):
             R = gamma * R + rewards[i]
+            # loss = loss + (log_probs[i]*(Variable(R).expand_as(log_probs[i])
+            #                              ).cuda()).sum() - (0.0001*entropies[i].cuda()).sum()
             loss = loss + (log_probs[i]*(Variable(R).expand_as(log_probs[i])
-                                         ).cuda()).sum() - (0.0001*entropies[i].cuda()).sum()
+                                         ).cuda()).sum()
         loss = loss / len(rewards)
 
         self.optimizer.zero_grad()
@@ -61,3 +63,4 @@ class REINFORCE:
         # 梯度裁剪防止过拟合，最大L2范数为40
         # utils.clip_grad_norm(self.model.parameters(), 50)
         self.optimizer.step()
+        return loss

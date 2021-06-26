@@ -53,9 +53,17 @@ ss_ucb = algorithm_run(armp, algorithm_ucb, 600)
 ############### REINFORCE ###############
 # Params
 Hidden_Size = 128
-Gamma = 0.99
+Gamma = 0.99  # Discount rate
 Episodes = 600  # 训练轮数
 Steps = 4  # 每轮的步数
+'''Note
+当估计action的值（reward）的时候，强化学习算法一般把这个action导致的所有reward进行求和
+求和的时候给immediate rewards（【即时奖励，时间上较近的奖励】）更大的权重，
+later rewards（【时间上较远的奖励】）更小的权重（认为一个动作对未来一小段时间的影响大于未来一大段时间的影响）。
+为了对这种情况进行建模，每个时间步应用一个discount rate
+如果你觉得未来重要，为了最后获得reward，你可能会近期承受很多pain；
+然而如果你觉得未来不重要，你可能会更看重 immediate rewards（【眼前利益】），而不是未来的投资。
+'''
 
 
 def rolling_mean(data, size=10):
@@ -99,13 +107,15 @@ for episode in range(Episodes):
         entropies.append(entropy)
         log_probs.append(log_prob)
         rewards.append(reward)
-    agent.update_parameters(rewards, log_probs, entropies, Gamma)
+    loss = agent.update_parameters(rewards, log_probs, entropies, Gamma)
     mean_reward = np.mean(rewards)
     reinforce_rewards.append(mean_reward)
     if(episode % 10 == 0):
-        print(
-            f"Episode {episode}: state = {state} , arm = {action[0]} , reward_mean = {mean_reward}")
+        print(f"Episode {episode}: loss = {loss}")
+#         print(
+#             f"Episode {episode}: state = {state} , arm = {action[0]} , reward_mean = {mean_reward}")
 reinforce_rewards = rolling_mean(reinforce_rewards, size=15)
+
 
 
 ls_array = ['-', '-.', '--', ':', '-', '-']
