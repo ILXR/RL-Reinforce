@@ -32,7 +32,7 @@ class EpsilonGreedy():
     def update(self, arm, reward):
         self.counts[arm] += 1
         self.values[arm] += (reward - self.values[arm]) / self.counts[arm]
-        print(self.values)
+        # print(self.values)
 
 # 定义UCB算法类
 

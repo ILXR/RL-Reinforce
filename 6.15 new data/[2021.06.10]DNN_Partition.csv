@@ -1,4 +1,4 @@
-,epoch,netState,GPU,batchNum,modelClass,modelCutID_T,allDelay,SendSrunModelReci,CModelDelay
+,epoch,not use netState,GPU,batchNum,not use modelClass,modelCutID_T,allDelay,SendSrunModelReci,CModelDelay
 1,1,1,0,1,0,0,2737,2735,2
 1,1,1,0,1,0,1,16286,16261,25
 1,1,1,0,1,0,2,16099,15938,161

@@ -24,6 +24,13 @@ class Environment():
                 return self.rewards[index]
         return -1
 
+    def get_rewards(self, state):
+        for i in range(8):
+            index = i*23
+            if((self.states[index] == state).all()):
+                return self.rewards[index:index+23]
+        return []
+
     def random_step(self):
         index = random.randint(0, len(self.rewards))
         reward = self.rewards[index]

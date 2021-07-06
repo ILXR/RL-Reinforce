@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@author: Yixuehao
-"""
-# -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -20,7 +14,7 @@ def algorithm_run(armp, algorithm, episodes):
     for episode in range(episodes):
         arm = algorithm.pull()
         reward = armp.step(arm)
-        print('Episode %s: arm = %s , reward = %.1f' % (episode, arm, reward))
+        # print('Episode %s: arm = %s , reward = %.1f' % (episode, arm, reward))
         algorithm.update(arm, reward)
         r += reward
         s.append(r / (episode + 1))  # average_regret
@@ -38,11 +32,9 @@ algorithm_random = Random(23)
 algorithm_greedy = EpsilonGreedy(23, 0.2)
 algorithm_ucb = UCB1(23)
 
-
 ss_random = np.zeros([1, 600])
 ss_greedy = np.zeros([1, 600])
 ss_ucb = np.zeros([1, 600])
-
 
 # for i in range(len(algorithms)):
 ss_random = algorithm_run(armp, algorithm_random, 600)
@@ -91,37 +83,57 @@ def smooth_average(record, n):
 # Env and Reinforce model
 env = Environment()
 agent = REINFORCE(env.state_size(), env.action_space(), Hidden_Size)
+agent_baseline = REINFORCE(env.state_size(), env.action_space(), Hidden_Size)
 
 # train
 reinforce_rewards = []
+print("REINFORCE")
 for episode in range(Episodes):
-    entropies = []
     log_probs = []
     rewards = []
     for t in range(Steps):
         state = env.random_state()
-        action, log_prob, entropy = agent.select_action(
+        action, log_prob, probs = agent.select_action(
             torch.from_numpy(state))
         reward = env.get_reward(state, action)
-
-        entropies.append(entropy)
-        log_probs.append(log_prob)
         rewards.append(reward)
-    loss = agent.update_parameters(rewards, log_probs, entropies, Gamma)
+        log_probs.append(log_prob)
+    loss = agent.update_parameters(rewards, log_probs, Gamma)
     mean_reward = np.mean(rewards)
     reinforce_rewards.append(mean_reward)
     if(episode % 10 == 0):
         print(f"Episode {episode}: loss = {loss}")
-#         print(
-#             f"Episode {episode}: state = {state} , arm = {action[0]} , reward_mean = {mean_reward}")
 reinforce_rewards = rolling_mean(reinforce_rewards, size=15)
 
+reinforce_baseline_rewards = []
+print("\nREINFORCE with advantage function")
+for episode in range(Episodes):
+    log_probs = []
+    rewards = []
+    rewards_baseline = []
+    for t in range(Steps):
+        state = env.random_state()
+        action, log_prob, probs = agent_baseline.select_action(
+            torch.from_numpy(state))
 
+        reward = env.get_reward(state, action)
+        rewards.append(reward)
+
+        state_rewards = torch.from_numpy(env.get_rewards(state)).cuda()
+        adv_func = (probs.mul(state_rewards)).sum()
+        rewards_baseline.append(reward-adv_func)
+
+        log_probs.append(log_prob)
+    loss = agent_baseline.update_parameters(rewards_baseline, log_probs, Gamma)
+    mean_reward = np.mean(rewards)
+    reinforce_baseline_rewards.append(mean_reward)
+    if(episode % 10 == 0):
+        print(f"Episode {episode}: loss = {loss}")
+reinforce_baseline_rewards = rolling_mean(reinforce_baseline_rewards, size=15)
 
 ls_array = ['-', '-.', '--', ':', '-', '-']
 marker_array = ['v', 's', '^', 'd', 'o', '.']
 
-# plt.plot(range(600), ss[0, :], label = '$\epsilon$-greedy (0.1)', color='b', ls='--', linewidth=1.5)
 plt.plot(range(600), ss_random, label='Random', ls='--',
          color='b', marker='v', markevery=40, linewidth=1.5)
 plt.plot(range(600), ss_greedy, label='Greedy', ls='-.',
@@ -130,11 +142,11 @@ plt.plot(range(600), ss_ucb, label='UCB', ls='-',
          color='g', marker='^', markevery=40, linewidth=1.5)
 plt.plot(range(600), reinforce_rewards, label="ReinForce", ls='-',
          color="orange", marker="d", markevery=40, linewidth=1.5)
-
+plt.plot(range(600), reinforce_baseline_rewards, label="ReinForce-advantage function", ls='-',
+         color="slateblue", marker="o", markevery=40, linewidth=1.5)
 
 plt.xlabel('Episode', fontsize=15)
 plt.ylabel('Latency', fontsize=15)
 plt.legend(loc='best', fontsize=12)
-# plt.savefig("C:/Users/YixueHao/Desktop/UCB.jpg")
-# plt.clf()
+# plt.savefig("./6.15 new data/Result.png")
 plt.show()

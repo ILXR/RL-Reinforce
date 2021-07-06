@@ -23,7 +23,7 @@ class Policy(nn.Module):
         x = F.relu(self.linear1(x))
         action_scores = self.linear2(x)
         # 输出各个动作的概率
-        return F.softmax(action_scores)
+        return F.softmax(action_scores, dim=0)
 
 
 class REINFORCE:
@@ -42,25 +42,25 @@ class REINFORCE:
         prob = probs[action[0]].view(1, -1)
         # 计算logP(r)值
         log_prob = prob.log()
-        entropy = - (probs*probs.log()).sum()  # 熵
+        return action, log_prob, probs
 
-        return action, log_prob, entropy
-
-    def update_parameters(self, rewards, log_probs, entropies, gamma):
+    def update_parameters(self, rewards, log_probs, gamma):
         # rewards, log_probs, entropies 均需要传入数组，一条轨迹上的所有数据
-        R = torch.zeros(1, 1)
+        R = torch.zeros(1, 1).cuda()
         loss = 0
         for i in reversed(range(len(rewards))):
             R = gamma * R + rewards[i]
-            # loss = loss + (log_probs[i]*(Variable(R).expand_as(log_probs[i])
-            #                              ).cuda()).sum() - (0.0001*entropies[i].cuda()).sum()
-            loss = loss + (log_probs[i]*(Variable(R).expand_as(log_probs[i])
-                                         ).cuda()).sum()
+            loss = loss + (log_probs[i]*Variable(R).expand_as(log_probs[i])
+                           ).sum()
         loss = loss / len(rewards)
 
         self.optimizer.zero_grad()
         loss.backward()
         # 梯度裁剪防止过拟合，最大L2范数为40
-        # utils.clip_grad_norm(self.model.parameters(), 50)
+        '''
+        clip_grad_norm(parameters: _tensor_or_tensors, max_norm: float, norm_type: float=2., error_if_nonfinite: bool=False) -> torch.Tensor
+        对所有参数计算范数（L1 或 L2），当结果大于 max_norm 时，对所有参数都加减相同的值，直到范数在给定的范围之内
+        '''
+        utils.clip_grad_norm_(self.model.parameters(), 50)
         self.optimizer.step()
         return loss
