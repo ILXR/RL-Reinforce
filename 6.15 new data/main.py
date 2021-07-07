@@ -90,15 +90,17 @@ reinforce_rewards = []
 print("REINFORCE")
 for episode in range(Episodes):
     log_probs = []
+    entropies = []
     rewards = []
     for t in range(Steps):
         state = env.random_state()
-        action, log_prob, probs = agent.select_action(
+        action, log_prob, probs, entrop = agent.select_action(
             torch.from_numpy(state))
         reward = env.get_reward(state, action)
         rewards.append(reward)
+        entropies.append(entrop)
         log_probs.append(log_prob)
-    loss = agent.update_parameters(rewards, log_probs, Gamma)
+    loss = agent.update_parameters(rewards, log_probs, entropies, Gamma)
     mean_reward = np.mean(rewards)
     reinforce_rewards.append(mean_reward)
     if(episode % 10 == 0):
@@ -109,22 +111,25 @@ reinforce_baseline_rewards = []
 print("\nREINFORCE with advantage function")
 for episode in range(Episodes):
     log_probs = []
+    entropies = []
     rewards = []
     rewards_baseline = []
     for t in range(Steps):
         state = env.random_state()
-        action, log_prob, probs = agent_baseline.select_action(
+        action, log_prob, probs, entrop = agent_baseline.select_action(
             torch.from_numpy(state))
 
         reward = env.get_reward(state, action)
         rewards.append(reward)
+        entropies.append(entrop)
 
         state_rewards = torch.from_numpy(env.get_rewards(state)).cuda()
         adv_func = (probs.mul(state_rewards)).sum()
         rewards_baseline.append(reward-adv_func)
 
         log_probs.append(log_prob)
-    loss = agent_baseline.update_parameters(rewards_baseline, log_probs, Gamma)
+    loss = agent_baseline.update_parameters(
+        rewards_baseline, log_probs, entropies, Gamma)
     mean_reward = np.mean(rewards)
     reinforce_baseline_rewards.append(mean_reward)
     if(episode % 10 == 0):

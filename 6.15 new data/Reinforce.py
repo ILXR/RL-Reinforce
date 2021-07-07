@@ -42,16 +42,19 @@ class REINFORCE:
         prob = probs[action[0]].view(1, -1)
         # 计算logP(r)值
         log_prob = prob.log()
-        return action, log_prob, probs
+        entropy = - (probs*probs.log()).sum()  # 熵
+        return action, log_prob, probs, entropy
 
-    def update_parameters(self, rewards, log_probs, gamma):
+    def update_parameters(self, rewards, log_probs, entropies, gamma):
         # rewards, log_probs, entropies 均需要传入数组，一条轨迹上的所有数据
         R = torch.zeros(1, 1).cuda()
         loss = 0
         for i in reversed(range(len(rewards))):
             R = gamma * R + rewards[i]
+            # loss = loss + (log_probs[i]*Variable(R).expand_as(log_probs[i])
+            #                ).sum()
             loss = loss + (log_probs[i]*Variable(R).expand_as(log_probs[i])
-                           ).sum()
+                           ).sum() - (0.0001*entropies[i].cuda()).sum()
         loss = loss / len(rewards)
 
         self.optimizer.zero_grad()
