@@ -7,8 +7,11 @@ from Environment import Environment
 from Armdata import DNNPartition
 from Algorithm import EpsilonGreedy, UCB1, Random
 
+Episodes = 1000  # 训练轮数
+L2_reg = True
+Clip_norm = False
 
-# 运行算法 episode 是运行多少次
+
 def algorithm_run(armp, algorithm, episodes):
     r, s = 0.0, []
     for episode in range(episodes):
@@ -21,32 +24,29 @@ def algorithm_run(armp, algorithm, episodes):
     return s
 
 
-# 定义算法的运行环境
 '''
 main code
 '''
-
 armp = DNNPartition(23)
 
 algorithm_random = Random(23)
 algorithm_greedy = EpsilonGreedy(23, 0.2)
 algorithm_ucb = UCB1(23)
 
-ss_random = np.zeros([1, 600])
-ss_greedy = np.zeros([1, 600])
-ss_ucb = np.zeros([1, 600])
+ss_random = np.zeros([1, Episodes])
+ss_greedy = np.zeros([1, Episodes])
+ss_ucb = np.zeros([1, Episodes])
 
 # for i in range(len(algorithms)):
-ss_random = algorithm_run(armp, algorithm_random, 600)
-ss_greedy = algorithm_run(armp, algorithm_greedy, 600)
-ss_ucb = algorithm_run(armp, algorithm_ucb, 600)
+ss_random = algorithm_run(armp, algorithm_random, Episodes)
+ss_greedy = algorithm_run(armp, algorithm_greedy, Episodes)
+ss_ucb = algorithm_run(armp, algorithm_ucb, Episodes)
 
 
 ############### REINFORCE ###############
 # Params
 Hidden_Size = 128
 Gamma = 0.99  # Discount rate
-Episodes = 600  # 训练轮数
 Steps = 4  # 每轮的步数
 '''Note
 当估计action的值（reward）的时候，强化学习算法一般把这个action导致的所有reward进行求和
@@ -87,6 +87,7 @@ agent_baseline = REINFORCE(env.state_size(), env.action_space(), Hidden_Size)
 
 # train
 reinforce_rewards = []
+reinforce_loss = []
 print("REINFORCE")
 for episode in range(Episodes):
     log_probs = []
@@ -100,14 +101,17 @@ for episode in range(Episodes):
         rewards.append(reward)
         entropies.append(entrop)
         log_probs.append(log_prob)
-    loss = agent.update_parameters(rewards, log_probs, entropies, Gamma)
+    loss = agent.update_parameters(
+        rewards, log_probs, entropies, Gamma, L2_reg, Clip_norm)
     mean_reward = np.mean(rewards)
     reinforce_rewards.append(mean_reward)
+    reinforce_loss.append(loss)
     if(episode % 10 == 0):
         print(f"Episode {episode}: loss = {loss}")
 reinforce_rewards = rolling_mean(reinforce_rewards, size=15)
 
 reinforce_baseline_rewards = []
+reinforce_baseline_loss = []
 print("\nREINFORCE with advantage function")
 for episode in range(Episodes):
     log_probs = []
@@ -116,6 +120,8 @@ for episode in range(Episodes):
     rewards_baseline = []
     for t in range(Steps):
         state = env.random_state()
+        best_action, best_reward = env.best_step(state)
+
         action, log_prob, probs, entrop = agent_baseline.select_action(
             torch.from_numpy(state))
 
@@ -129,29 +135,53 @@ for episode in range(Episodes):
 
         log_probs.append(log_prob)
     loss = agent_baseline.update_parameters(
-        rewards_baseline, log_probs, entropies, Gamma)
+        rewards_baseline, log_probs, entropies, Gamma, L2_reg, Clip_norm)
     mean_reward = np.mean(rewards)
+    reinforce_baseline_loss.append(loss)
     reinforce_baseline_rewards.append(mean_reward)
     if(episode % 10 == 0):
         print(f"Episode {episode}: loss = {loss}")
 reinforce_baseline_rewards = rolling_mean(reinforce_baseline_rewards, size=15)
 
+# Draw Curves
+x_list = range(Episodes)
 ls_array = ['-', '-.', '--', ':', '-', '-']
 marker_array = ['v', 's', '^', 'd', 'o', '.']
 
-plt.plot(range(600), ss_random, label='Random', ls='--',
+plt.figure()
+title = f'Clip norm: {Clip_norm}\nL2 Regularization: {L2_reg}'
+plt.title(title)
+plt.plot(x_list, ss_random, label='Random', ls='--',
          color='b', marker='v', markevery=40, linewidth=1.5)
-plt.plot(range(600), ss_greedy, label='Greedy', ls='-.',
+plt.plot(x_list, ss_greedy, label='Greedy', ls='-.',
          color='r', marker='s', markevery=40, linewidth=1.5)
-plt.plot(range(600), ss_ucb, label='UCB', ls='-',
+plt.plot(x_list, ss_ucb, label='UCB', ls='-',
          color='g', marker='^', markevery=40, linewidth=1.5)
-plt.plot(range(600), reinforce_rewards, label="ReinForce", ls='-',
+plt.plot(x_list, reinforce_rewards, label="ReinForce", ls='-',
          color="orange", marker="d", markevery=40, linewidth=1.5)
-plt.plot(range(600), reinforce_baseline_rewards, label="ReinForce-advantage function", ls='-',
+plt.plot(x_list, reinforce_baseline_rewards, label="ReinForce-advantage function", ls='-',
          color="slateblue", marker="o", markevery=40, linewidth=1.5)
-
 plt.xlabel('Episode', fontsize=15)
 plt.ylabel('Latency', fontsize=15)
 plt.legend(loc='best', fontsize=12)
-# plt.savefig("./6.15 new data/Result.png")
+plt.ylim(ymax=15000, ymin=1000)
+manager = plt.get_current_fig_manager()
+manager.window.state('zoomed')
+
+file_name = title.replace("\n", " -- ").replace(": ", "-")
+# plt.savefig("6.15 new data/result/"+"reward -- "+file_name+".png")
+
+plt.figure()
+plt.title(title)
+plt.plot(x_list, reinforce_loss,  label="ReinForce", ls='-',
+         color="orange", marker="d", markevery=40, linewidth=1.5)
+plt.plot(x_list, reinforce_baseline_loss, label="ReinForce-advantage function", ls='-',
+         color="slateblue", marker="o", markevery=40, linewidth=1.5)
+plt.xlabel('Episode', fontsize=15)
+plt.ylabel('Loss', fontsize=15)
+plt.legend(loc='best', fontsize=12)
+manager = plt.get_current_fig_manager()
+manager.window.state('zoomed')
+# plt.savefig("6.15 new data/result/"+"loss -- "+file_name+".png")
+
 plt.show()

@@ -31,6 +31,15 @@ class Environment():
                 return self.rewards[index:index+23]
         return []
 
+    def best_step(self, state):
+        for i in range(8):
+            index = i*23
+            if((self.states[index] == state).all()):
+                rewards = self.rewards[index:index+23].tolist()
+                action = rewards.index(min(rewards))
+                return action, rewards[action]
+        return -1, 0
+
     def random_step(self):
         index = random.randint(0, len(self.rewards))
         reward = self.rewards[index]
