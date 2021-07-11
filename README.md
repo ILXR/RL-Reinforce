@@ -42,16 +42,22 @@ https://www.zhihu.com/question/41252833/answer/195901726)
 
 * [x] **Policy Gradient** - **Off-policy**- **Important Sampling**
   * On-policy: 学习到的agent以及和环境进行互动的agent是同一个agent
-  Off-policy: 学习到的agent以及和环境进行互动的agent是不同的agent
-  **为什么引入Off-policy**
-  <code>如果我们使用 π<sub>θ</sub> 来收集数据，那么参数 θ 被更新后，我们需要重新对训练数据进行采样，这样会造成巨大的时间消耗。
-  目标：利用 π<sub>θ′</sub> 来进行采样，将采集的样本拿来训练 θ， θ′ 是固定的，采集的样本可以被重复使用。</code>
-  **Important Sampling**
-  当我们只有通过另外一个分布得到的样本时，期望值可以做出以下更改，更换分布之后，需要使用重要性权重 p(x)/q(x) 来修正 f(x) ，这样就实现了使用q分布来计算p分布期望值。
-  ![Important sampling 1](pics/Important%20sampling%201.png)
-  <code>从上述important sampling的思想出发，可以使用该思想来达到上文所述的目标，即 “利用 π<sub>θ′</sub> 来进行采样，将采集的样本拿来训练 θ ，θ′ 是固定的，采集的样本可以被重复使用” 表示为：</code>
-  ![Important sampling 2](pics/Important%20sampling%202.png)
-  **Tips**:
+  
+    Off-policy: 学习到的agent以及和环境进行互动的agent是不同的agent
+  
+  * **为什么引入Off-policy**
+
+    <code>如果我们使用 π<sub>θ</sub> 来收集数据，那么参数 θ 被更新后，我们需要重新对训练数据进行采样，这样会造成巨大的时间消耗。
+    目标：利用 π<sub>θ′</sub> 来进行采样，将采集的样本拿来训练 θ， θ′ 是固定的，采集的样本可以被重复使用。</code>
+  * **Important Sampling**
+    
+    当我们只有通过另外一个分布得到的样本时，期望值可以做出以下更改，更换分布之后，需要使用重要性权重 p(x)/q(x) 来修正 f(x) ，这样就实现了使用q分布来计算p分布期望值。
+    ![Important sampling 1](pics/Important%20sampling%201.png)
+  
+    <code>从上述important sampling的思想出发，可以使用该思想来达到上文所述的目标，即 “利用 π<sub>θ′</sub> 来进行采样，将采集的样本拿来训练 θ ，θ′ 是固定的，采集的样本可以被重复使用” 表示为：</code>
+    ![Important sampling 2](pics/Important%20sampling%202.png)
+  
+  * **Tips**:
     1. <code>Advantage function (收益reward减去基准baseline) 也应该随着新的采样参数而变化（从基于θ 的A<sup>θ</sup> 变为基于θ′ 的A<sup>θ′</sup>）</code>
     2. p q 分布之间的差异依旧不宜过大
 
