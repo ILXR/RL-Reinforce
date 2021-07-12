@@ -46,16 +46,18 @@ class REINFORCE:
         entropy = - (probs*probs.log()).sum()  # 熵
         return action, log_prob, probs, entropy
 
-    def update_parameters(self, rewards, log_probs, entropies, gamma, l2_reg=False, clip_norm=False):
+    def update_parameters(self, rewards, log_probs, entropies, gamma, l2_reg=False, clip_norm=False, use_entropy=True):
         # rewards, log_probs, entropies 均需要传入数组，一条轨迹上的所有数据
         R = torch.zeros(1, 1).cuda()
         loss = 0
         for i in reversed(range(len(rewards))):
             R = gamma * R + rewards[i]
-            # loss = loss + (log_probs[i]*Variable(R).expand_as(log_probs[i])
-            #                ).sum()
-            loss = loss + (log_probs[i]*Variable(R).expand_as(log_probs[i])
-                           ).sum() - (0.0001*entropies[i].cuda()).sum()
+            if(use_entropy):
+                loss = loss + (log_probs[i]*Variable(R).expand_as(log_probs[i])
+                               ).sum() - (0.0001*entropies[i].cuda()).sum()
+            else:
+                loss = loss + (log_probs[i]*Variable(R).expand_as(log_probs[i])
+                               ).sum()
         loss = loss / len(rewards)
 
         # 这里的model中每个参数的名字都是系统自动命名的，只要是权值都是带有weight，偏置都带有bias，
