@@ -17,46 +17,73 @@ class Environment():
         for item in all_delay.iterrows():
             [epoch,gpu,batch,cut,delay,_,_] = item[1].values
             delay_reward = (delay-min_delay)/(max_delay-min_delay)
-            power = all_flop[(all_flop['batchNum']==batch) & (all_flop['modelCutID_T']==cut)]['S_flops'].mean()
+            power = all_flop[(all_flop['batchNum']==batch) & (all_flop['modelCutID_T']==cut)]['S_flops'].values[0]
             power_reward = (power-min_flop)/(max_flop-min_flop)
             all_data.loc[count] = {'gpu':gpu,'batch':batch,'cut':cut,'reward':delay_reward+power_reward}
             count+=1
-        self.all_data = all_data
-    
+        self.data_frame = all_data
+        self.__count = count    
+        
+    def get_rewards(self, state):
+        [gpu,batch] = state
+        data = self.data_frame
+        res = data[(data['gpu']==int(gpu))&(data['batch']==int(batch))]['reward'].values
+        return np.array(res)
 
-    def get_reward(self, state):
+    def get_reward(self, state, action):
         ''' state = [gpu,batch] '''
         [gpu,batch] = state
         data = self.data_frame
-        res = data[(data['gpu']==gpu)&(data['batch']==batch)]['reward'].values[0]
+        res = data[(data['gpu']==int(gpu))&(data['batch']==int(batch))&(data['cut']==int(action))]['reward'].values[0]
         return res
     
     def get_reward_by_action(self,action):
-        data = self.all_data
-        reward = data[(data['cut']==action)]['reward'].mean()
-        return reward
+        data = self.data_frame
+        reward = data[(data['cut']==action)]['reward']
+        index = random.randint(0, reward.shape[0]-1)
+        return reward.iloc[index]
+        # return reward.max()
 
     def best_step(self, state):
-        
-        return -1, 0
+        ''' return -> best_cut, best_reward'''
+        [gpu,batch] = state
+        data = self.data_frame
+        tem_data = data[(data['gpu']==int(gpu))&(data['batch']==int(batch))]
+        best_reward = tem_data['reward'].min()
+        best_cut = data[data['reward']==best_reward]['cut'].values[0]
+        return best_cut, best_reward
 
     def random_step(self):
-        index = random.randint(0, self.__state_size)
+        ''' return -> [gpu,batch],cut,reward '''
+        index = random.randint(0,self.__count-1)
         data = self.data_frame.loc[index]
-        return [int(data['gpu']),int(data['cut'])], data['reward']
+        return np.array([data['gpu'],data['batch']]), data['cut'], data['reward']
 
     def random_state(self):
-        index = random.randint(0, self.__state_size)
-        data = self.data_frame.loc[index]
-        return [data['gpu'],data['cut']]
+        ''' return -> [gpu,batch] '''
+        index = random.randint(0,self.__count-1)
+        data = self.data_frame.iloc[index]
+        return np.array([data['gpu'],data['batch']],dtype='double')
 
     def action_size(self):
         return len(self.actions)
 
     def state_size(self):
-        return self.__state_size
+        return 2
 
     def action_space(self):
         return self.actions
 
-env = Environment()
+    def data_size(self):
+        return self.__count
+
+# env = Environment()
+# print(env.random_state())
+# [gpu,batch],cut,reward = env.random_step()
+# print(gpu,batch,cut,reward)
+# print(env.get_reward([gpu,batch],cut))
+# print(env.get_reward_by_action(cut))
+# print(env.best_step([gpu,batch]))
+# print(env.action_size())
+# print(env.action_space())
+# print(env.state_size())

@@ -10,19 +10,21 @@ from Algorithm import EpsilonGreedy, UCB1, Random
 # Params
 Episodes = 1000  # 训练轮数
 # Reinforce
-L2_reg = False
+L2_reg = True
 Clip_norm = False
-Use_entropy = True
+Use_entropy = False
 Hidden_Size = 128
 Gamma = 0.99  # Discount rate
 Steps = 4  # 每轮的步数
 
+armp = DNNPartition(23)
+env = Environment()
 
-def algorithm_run(armp, algorithm, episodes):
+def algorithm_run(env, algorithm, episodes):
     r, s = 0.0, []
     for episode in range(episodes):
         arm = algorithm.pull()
-        reward = armp.step(arm)
+        reward = env.get_reward_by_action(arm)
         # print('Episode %s: arm = %s , reward = %.1f' % (episode, arm, reward))
         algorithm.update(arm, reward)
         r += reward
@@ -52,10 +54,6 @@ def smooth_average(record, n):
     return res
 
 
-armp = DNNPartition(23)
-env = Environment()
-
-
 def main():
     algorithm_random = Random(23)
     algorithm_greedy = EpsilonGreedy(23, 0.2)
@@ -66,9 +64,9 @@ def main():
     ss_ucb = np.zeros([1, Episodes])
 
     # for i in range(len(algorithms)):
-    ss_random = algorithm_run(armp, algorithm_random, Episodes)
-    ss_greedy = algorithm_run(armp, algorithm_greedy, Episodes)
-    ss_ucb = algorithm_run(armp, algorithm_ucb, Episodes)
+    ss_random = algorithm_run(env, algorithm_random, Episodes)
+    ss_greedy = algorithm_run(env, algorithm_greedy, Episodes)
+    ss_ucb = algorithm_run(env, algorithm_ucb, Episodes)
 
     ############### REINFORCE ###############
 
@@ -112,7 +110,7 @@ def main():
         rewards_baseline = []
         for t in range(Steps):
             state = env.random_state()
-            best_action, best_reward = env.best_step(state)
+            # best_action, best_reward = env.best_step(state)
 
             action, log_prob, probs, entrop = agent_baseline.select_action(
                 torch.from_numpy(state))
@@ -142,7 +140,7 @@ def main():
     marker_array = ['v', 's', '^', 'd', 'o', '.']
 
     plt.figure()
-    title = f'Clip norm: {Clip_norm}\nL2 Regularization: {L2_reg}'
+    title = f'Clip norm: {Clip_norm}\nL2 Regularization: {L2_reg}\nUse Entropy: {Use_entropy}'
     plt.title(title)
     plt.plot(x_list, ss_random, label='Random', ls='--',
              color='b', marker='v', markevery=40, linewidth=1.5)
@@ -157,12 +155,12 @@ def main():
     plt.xlabel('Episode', fontsize=15)
     plt.ylabel('Latency', fontsize=15)
     plt.legend(loc='best', fontsize=12)
-    plt.ylim(ymax=15000, ymin=1000)
+    # plt.ylim(ymax=15000, ymin=1000)
     manager = plt.get_current_fig_manager()
     manager.window.state('zoomed')
 
     file_name = title.replace("\n", " -- ").replace(": ", "-")
-    # plt.savefig("6.15 new data/result/"+"reward -- "+file_name+".png")
+    plt.savefig("6.15 new data/new_result/"+"reward -- "+file_name+".png")
 
     plt.figure()
     plt.title(title)
@@ -175,14 +173,15 @@ def main():
     plt.legend(loc='best', fontsize=12)
     manager = plt.get_current_fig_manager()
     manager.window.state('zoomed')
-    # plt.savefig("6.15 new data/result/"+"loss -- "+file_name+".png")
+    plt.savefig("6.15 new data/new_result/"+"loss -- "+file_name+".png")
 
 
 '''
 Main Func
 '''
-Use_entropy = True
-main()
-Use_entropy = False
-main()
-plt.show()
+all_possible = [True,False]
+
+for Use_entropy in all_possible:
+    for Clip_norm in all_possible:
+        for L2_reg in all_possible:
+            main()
